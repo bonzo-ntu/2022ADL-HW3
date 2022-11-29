@@ -1,6 +1,6 @@
 # Environment
 python 3.9
-torch==1.12.1+cu116
+torch==1.12.1+cu116  
 transformers==4.24.0
 
 # Training
