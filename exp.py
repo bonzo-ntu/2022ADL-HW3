@@ -1,53 +1,58 @@
-import csv
 import json
-from argparse import ArgumentParser, Namespace
-from pathlib import Path
+from parsers import test_args
 
 import torch
 from accelerate import Accelerator
 from datasets import load_dataset
 from torch.utils.data import DataLoader
 from transformers import (
-    AutoModelForQuestionAnswering,
-    AutoModelForMultipleChoice,
     AutoTokenizer,
-    default_data_collator,
     set_seed,
     AutoConfig,
-    AutoModelForSeq2SeqLM, DataCollatorForSeq2Seq,
+    AutoModelForSeq2SeqLM,
+    DataCollatorForSeq2Seq,
 )
 
-from utils import PreprocessTitleGenTrain
+from utils import PreprocessOfSummarizationTrain
 
 
 accelerator = Accelerator()
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 set_seed(1)
 
 
 def main(args):
     # Config Tokenizer and Model
-    config = AutoConfig.from_pretrained(args.ckpt)
-    tokenizer = AutoTokenizer.from_pretrained(args.ckpt, use_fast=True)
-    model = AutoModelForSeq2SeqLM.from_pretrained(args.ckpt, config=config)
+    # config = AutoConfig.from_pretrained(args.ckpt)
+    # tokenizer = AutoTokenizer.from_pretrained(args.ckpt, use_fast=True)
+    # model = AutoModelForSeq2SeqLM.from_pretrained(args.ckpt, config=config)
+    # model.resize_token_embeddings(len(tokenizer))
+
+    print(f"resume model from {args.resume_ckpt}")
+    config = AutoConfig.from_pretrained(args.resume_ckpt)
+    tokenizer = AutoTokenizer.from_pretrained(args.resume_ckpt, use_fast=True)
+    model = AutoModelForSeq2SeqLM.from_pretrained(args.resume_ckpt, config=config)
     model.resize_token_embeddings(len(tokenizer))
 
     # Dataset
-    dev_files = ["./data/public.jsonl"]
-    splits = ["eval"]
-    raw_datasets = load_dataset("title_gen.py", name="Title Gen",
-                                jsonl_files=dev_files, split_names=splits)
+    raw_datasets = load_dataset(
+        "summary_generator.py",
+        name="Summary Dataset",
+        cache_dir="./cache",
+        jsonl_files=[args.test_file],
+        split_names=["eval"],
+    )
 
     # TODO: make utils function to keep id column
     all_id = [features["id"] for features in raw_datasets["validation"]]
     column_names = raw_datasets["validation"].column_names
 
-    preprocess_function = PreprocessTitleGenTrain(tokenizer=tokenizer)
+    preprocess_function = PreprocessOfSummarizationTrain(tokenizer=tokenizer)
     with accelerator.main_process_first():
         processed_datasets = raw_datasets.map(
             preprocess_function,
             batched=True,
-            remove_columns=column_names,
+            remove_columns=["id", "maintext", "title"],  # column_names,
             desc="Running tokenizer on dataset",
         )
 
@@ -63,57 +68,69 @@ def main(args):
     model, eval_dataloader = accelerator.prepare(model, eval_dataloader)
 
     gen_kwargs_set = [
-        # {
-        #     "max_length": args.max_target_length,
-        #     "num_beams": args.num_beams,
-        # },
-        # {
-        #     "max_length": args.max_target_length,
-        #     "num_beams": 2,
-        #     "num_return_sequences": 1,
-        #     "early_stopping": True,
-        # },
-        # {
-        #     "max_length": args.max_target_length,
-        #     "num_beams": 4,
-        #     "num_return_sequences": 1,
-        #     "early_stopping": True,
-        # },
-        # {
-        #     "max_length": args.max_target_length,
-        #     "do_sample": True,
-        #     "top_k": 0,
-        #     "temperature": 0.7,
-        # },
-        # {
-        #     "max_length": args.max_target_length,
-        #     "do_sample": True,
-        #     "top_k": 50,
-        # }
-        # {
-        #     "max_length": args.max_target_length,
-        #     "do_sample": True,
-        #     "top_k": 0,
-        #     "temperature": 0.9,
-        # },
+        {
+            "max_length": args.max_target_length,
+            "num_beams": args.num_beams,
+        },
+        {
+            "max_length": args.max_target_length,
+            "num_beams": 2,
+            "num_return_sequences": 1,
+            "early_stopping": True,
+        },
+        {
+            "max_length": args.max_target_length,
+            "num_beams": 4,
+            "num_return_sequences": 1,
+            "early_stopping": True,
+        },
         {
             "max_length": args.max_target_length,
             "do_sample": True,
-            "top_k": 30,
-        }
+            "top_k": 0,
+            "temperature": 0.3,
+        },
+        {
+            "max_length": args.max_target_length,
+            "do_sample": True,
+            "top_k": 0,
+            "temperature": 0.9,
+        },
+        {
+            "max_length": args.max_target_length,
+            "do_sample": True,
+            "top_k": 5,
+        },
+        {
+            "max_length": args.max_target_length,
+            "do_sample": True,
+            "top_k": 20,
+        },
+        {
+            "max_length": args.max_target_length,
+            "do_sample": True,
+            "top_p": 0.75,
+        },
+        {
+            "max_length": args.max_target_length,
+            "do_sample": True,
+            "top_p": 0.95,
+        },
     ]
-    output_filenames = [
-        # "./assets/result-origin.jsonl",
-        # "./assets/result-beams_2.jsonl",
-        # "./assets/result-beams_4.jsonl",
-        # "./assets/result-temp_0.7.jsonl",
-        # "./assets/result-top_50.jsonl",
-        # "./assets/result-temp_0.9.jsonl",
-        "./assets/result-top_30.jsonl",
+    output_files = [
+        "./experiments/result-origin.jsonl",
+        "./experiments/result-beams_2.jsonl",
+        "./experiments/result-beams_4.jsonl",
+        "./experiments/result-temp_0.3.jsonl",
+        "./experiments/result-temp_0.9.jsonl",
+        "./experiments/result-top_k_5.jsonl",
+        "./experiments/result-top_k_20.jsonl",
+        "./experiments/result-top_p_0.75.jsonl",
+        "./experiments/result-top_p_0.95.jsonl",
     ]
 
     # Testing
-    for gen_kwargs, filename in zip(gen_kwargs_set, output_filenames):
+    for gen_kwargs, output_file in zip(gen_kwargs_set, output_files):
         all_pred = []
         for step, batch in enumerate(eval_dataloader):
             with torch.no_grad():
@@ -143,35 +160,12 @@ def main(args):
 
         if not args.dev:
             # Write result to csv file
-            with open(filename, 'w') as file:
+            with open(output_file, "w") as file:
                 for idx, title in zip(all_id, all_pred):
                     json.dump({"title": title, "id": idx}, file)
-                    file.write('\n')
-
-
-def parse_args() -> Namespace:
-    parser = ArgumentParser()
-    # file path
-    parser.add_argument("--test_file", type=Path, default="./data/public.jsonl")
-    parser.add_argument("--pred_file", type=Path, default="result-dev.jsonl")
-
-    # ckpt folder
-    parser.add_argument("--ckpt", type=Path, default="./ckpt/07d92fbf")
-
-    # data loader
-    parser.add_argument("--batch_size", type=int, default=32)
-
-    # summary generation
-    parser.add_argument("--max_target_length", type=int, default=64)
-    parser.add_argument("--num_beams", type=int, default=None)
-    parser.add_argument("--ignore_pad_token_for_loss", type=bool, default=True)
-
-    parser.add_argument("--dev", action="store_true")
-
-    args = parser.parse_args()
-    return args
+                    file.write("\n")
 
 
 if __name__ == "__main__":
-    arges = parse_args()
+    arges = test_args()
     main(arges)

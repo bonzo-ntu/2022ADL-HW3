@@ -1,6 +1,5 @@
 import json
-from argparse import ArgumentParser, Namespace
-
+from parsers import test_args
 
 import torch
 from accelerate import Accelerator
@@ -15,7 +14,7 @@ from transformers import (
     DataCollatorForSeq2Seq,
 )
 
-from utils import PreprocessTitleGenTrain
+from utils import PreprocessOfSummarizationTrain
 
 accelerator = Accelerator()
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -24,9 +23,10 @@ set_seed(1)
 
 def main(args):
     # Config Tokenizer and Model
-    config = AutoConfig.from_pretrained(args.ckpt)
-    tokenizer = AutoTokenizer.from_pretrained(args.ckpt, use_fast=True)
-    model = AutoModelForSeq2SeqLM.from_pretrained(args.ckpt, config=config)
+    print(f"resume model from {args.resume_ckpt}")
+    config = AutoConfig.from_pretrained(args.resume_ckpt)
+    tokenizer = AutoTokenizer.from_pretrained(args.resume_ckpt, use_fast=True)
+    model = AutoModelForSeq2SeqLM.from_pretrained(args.resume_ckpt, config=config)
     model.resize_token_embeddings(len(tokenizer))
 
     # Dataset
@@ -41,12 +41,12 @@ def main(args):
     # TODO: make utils function to keep id column
     all_id = [features["id"] for features in raw_datasets["test"]]
 
-    preprocess_function = PreprocessTitleGenTrain(tokenizer=tokenizer)
+    preprocess_function = PreprocessOfSummarizationTrain(tokenizer=tokenizer)
     with accelerator.main_process_first():
         processed_datasets = raw_datasets.map(
             preprocess_function,
             batched=True,
-            remove_columns=["id", "article", "highlights"],
+            remove_columns=["id", "maintext", "title"],
             desc="Running tokenizer on dataset",
         )
     eval_dataset = processed_datasets["test"]
@@ -60,10 +60,6 @@ def main(args):
     eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator, batch_size=args.batch_size)
     model, eval_dataloader = accelerator.prepare(model, eval_dataloader)
 
-    # gen_kwargs = {
-    #     "max_length": args.max_target_length,
-    #     "num_beams": args.num_beams,
-    # }
     gen_kwargs = {
         "max_length": args.max_target_length,
         "num_beams": 4,
@@ -107,31 +103,6 @@ def main(args):
             file.write("\n")
 
 
-# def parse_args() -> Namespace:
-#     parser = ArgumentParser()
-#     # file path
-#     parser.add_argument("--test_file", type=Path, default="./data/public.jsonl")
-#     parser.add_argument("--pred_file", type=Path, default="result-dev.jsonl")
-
-#     # ckpt folder
-#     parser.add_argument("--ckpt", type=Path, default="./ckpt/07d92fbf")
-
-#     # data loader
-#     # TODO: modify for submission => 4
-#     parser.add_argument("--batch_size", type=int, default=32)
-
-#     # summary generation
-#     parser.add_argument("--max_target_length", type=int, default=64)
-#     parser.add_argument("--num_beams", type=int, default=None)
-#     parser.add_argument("--ignore_pad_token_for_loss", type=bool, default=True)
-
-#     parser.add_argument("--dev", action="store_true")
-
-#     args = parser.parse_args()
-#     return args
-
-
 if __name__ == "__main__":
-    # arges = parse_args()
     arges = test_args()
     main(arges)

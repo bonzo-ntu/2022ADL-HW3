@@ -156,10 +156,10 @@ def test_args():
     parser = argparse.ArgumentParser()
     # file path
     parser.add_argument("--test_file", type=Path, default="./data/public.jsonl")
-    parser.add_argument("--pred_file", type=Path, default="result-dev.jsonl")
+    parser.add_argument("--pred_file", type=Path, default="result.jsonl")
 
     # ckpt folder
-    parser.add_argument("--ckpt", type=Path, default="./ckpt/b8d53e74/")
+    parser.add_argument("--resume_ckpt", type=Path, default="./ckpt/model/")
 
     # data loader
     # TODO: modify for submission => 4
@@ -190,6 +190,7 @@ def test_args():
         default=True,
         help="Whether to ignore the tokens corresponding to " "padded labels in the loss computation or not.",
     )
+    parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--dev", action="store_true")
 
     args = parser.parse_args()

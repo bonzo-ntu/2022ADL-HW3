@@ -1,23 +1,31 @@
 import json
-from parsers import eval_args
-import pandas as pd
+import argparse
 from tw_rouge import get_rouge
 
 
 def main(args):
-    ref = pd.read_json(args.reference, lines=True)
-    pred = pd.read_json(args.prediction, lines=True)
+    refs, preds = {}, {}
 
-    # re-index then align by id
-    ref.index, pred.index = ref.id.values, pred.id.values
-    pred = pred.loc[ref.index]
+    with open(args.reference) as file:
+        for line in file:
+            line = json.loads(line)
+            refs[line["id"]] = line["title"].strip() + "\n"
 
-    refs = ref.title.to_list()
-    preds = pred.title.to_list()
+    with open(args.submission) as file:
+        for line in file:
+            line = json.loads(line)
+            preds[line["id"]] = line["title"].strip() + "\n"
 
-    print(json.dumps(get_rouge(preds, refs), indent=4))
+    keys = refs.keys()
+    refs = [refs[key] for key in keys]
+    preds = [preds[key] for key in keys]
+
+    print(json.dumps(get_rouge(preds, refs), indent=2))
 
 
 if __name__ == "__main__":
-    args = eval_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-r", "--reference")
+    parser.add_argument("-s", "--submission")
+    args = parser.parse_args()
     main(args)

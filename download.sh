@@ -1,8 +1,8 @@
-wget --content-disposition --directory-prefix ckpt/f2909158 https://www.dropbox.com/s/wqgsb6v64ap4rt1/all_results.json?dl=1
-wget --content-disposition --directory-prefix ckpt/f2909158 https://www.dropbox.com/s/pl5cqz15rd7cwod/config.json?dl=0
-wget --content-disposition --directory-prefix ckpt/f2909158 https://www.dropbox.com/s/s2kgli5oq8tv302/log.json?dl=1
-wget --content-disposition --directory-prefix ckpt/f2909158 https://www.dropbox.com/s/ziuo9hy39ky23s0/pytorch_model.bin?dl=1
-wget --content-disposition --directory-prefix ckpt/f2909158 https://www.dropbox.com/s/tmi6019kfd5vo7l/special_tokens_map.json?dl=1
-wget --content-disposition --directory-prefix ckpt/f2909158 https://www.dropbox.com/s/zviyglwqrtf0z9j/spiece.model?dl=1
-wget --content-disposition --directory-prefix ckpt/f2909158 https://www.dropbox.com/s/ij0pwghdwhiklrc/tokenizer_config.json?dl=1
-wget --content-disposition --directory-prefix ckpt/f2909158 https://www.dropbox.com/s/wa7p7tujrcjn2bi/tokenizer.json?dl=1
+wget --content-disposition --directory-prefix ckpt/model https://www.dropbox.com/s/uhznib0crqidzta/all_results.json?dl=1
+wget --content-disposition --directory-prefix ckpt/model https://www.dropbox.com/s/6bu9ifeldf32e66/config.json?dl=1
+wget --content-disposition --directory-prefix ckpt/model https://www.dropbox.com/s/r07wkrz5rfan2vm/log.json?dl=1
+wget --content-disposition --directory-prefix ckpt/model https://www.dropbox.com/s/0394gfn3falbxpr/pytorch_model.bin?dl=1
+wget --content-disposition --directory-prefix ckpt/model https://www.dropbox.com/s/bjwljors24h800q/special_tokens_map.json?dl=1
+wget --content-disposition --directory-prefix ckpt/model https://www.dropbox.com/s/1ffkyjvohmza38c/tokenizer_config.json?dl=1
+wget --content-disposition --directory-prefix ckpt/model https://www.dropbox.com/s/jh6adehdgpx7rj8/tokenizer.json?dl=1
+wget --content-disposition --directory-prefix ckpt/model https://www.dropbox.com/s/5a0scucsqsbcz4f/spiece.model?dl=1
